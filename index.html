@@ -5,17 +5,19 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>G検定 学習用 - サンプル5問</title>
 <style>
-  body { font-family: sans-serif; padding: 1em; font-size: 18px; margin-bottom:120px; }
-  .question-wrapper { margin-bottom: 40px; padding: 1em; border: 1px solid #ccc; border-radius: 10px; }
+  body { font-family: sans-serif; padding: 1em; font-size: 16px; margin-bottom:120px; }
+  .question-wrapper { margin-bottom: 20px; padding: 1em; border: 1px solid #ccc; border-radius: 10px; }
   .options { margin-top: 1em; }
-  .answer-buttons { margin-top: 1em; display: flex; flex-wrap: wrap; gap: 10px; }
-  .answer-button { flex: 1 1 100%; font-size: 1rem; padding: 10px; border: 2px solid #333; border-radius: 10px; cursor: pointer; text-align: left; }
+  .answer-buttons { margin-top: 1em; display: flex; flex-direction: column; gap: 10px; }
+  .answer-button { font-size: 1rem; padding: 10px; border: 2px solid #333; border-radius: 10px; cursor: pointer; text-align: left; }
   .judgement { margin-top: 10px; font-weight: bold; }
   .button-group, .button-container { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding: 10px 0; }
   .button-group button, .button-container button { flex: 0 0 auto; min-width: 120px; font-size: 1rem; padding: 10px; white-space: nowrap; }
-  #controls { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #ccc; padding: 10px; z-index: 9999; display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap; }
-  #controls .btn { padding:8px 12px; font-size:14px; cursor:pointer; }
-  #score { min-width:220px; text-align:center; font-weight:600; }
+  #top-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
+  #top-controls .btn, #top-controls #score-toggle-btn { padding:8px 12px; font-size:14px; cursor:pointer; }
+  #score-display { text-align:center; font-weight:600; padding: 10px 0; }
+  #bottom-controls { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #ccc; padding: 10px; z-index: 9999; display:flex; gap:10px; align-items:center; justify-content:center; }
+  #bottom-controls .btn { padding:8px 12px; font-size:14px; cursor:pointer; }
   .hidden { display:none !important; }
   .weak-btn { padding:6px 8px; border-radius:6px; cursor:pointer; }
   .explanation { margin-top: 20px; padding: 1em; border: 1px solid #ddd; background-color: #f9f9f9; border-radius: 8px; }
@@ -25,7 +27,6 @@
 </style>
 </head>
 <body>
-<h1 style="font-size: 1.2em;">G検定 学習用</h1>
 
 <div id="login-screen" style="text-align:center; margin-top:100px;">
   <h2>ログイン</h2>
@@ -35,7 +36,18 @@
   <p id="login-error" style="color:red; font-weight:bold;"></p>
 </div>
 
-<div id="questions" class="hidden">
+<div id="quiz-container" class="hidden">
+  <div id="top-controls">
+    <button class="btn" onclick="toggleMode('all')" id="all-mode-btn">全問</button>
+    <button class="btn" onclick="toggleMode('wrong')" id="wrong-mode-btn">不正解</button>
+    <button class="btn" onclick="toggleMode('review')" id="review-mode-btn">復習モード</button>
+    <button class="btn" onclick="toggleMode('random50')" id="random-50-btn">50問ランダム</button>
+    <button class="btn" onclick="resetQuiz()" id="reset-btn">リセット</button>
+    <button class="btn" id="score-toggle-btn">スコア</button>
+  </div>
+
+  <div id="score-display" class="hidden"></div>
+
   <div class="question-wrapper">
     <div id="question-container"></div>
     <div class="judgement"></div>
@@ -43,15 +55,9 @@
   </div>
 </div>
 
-<div id="controls" class="hidden">
+<div id="bottom-controls" class="hidden">
   <button class="btn" onclick="previousQuestion()" id="prev-btn" disabled>前へ</button>
-  <div id="score"></div>
   <button class="btn" onclick="nextQuestion()" id="next-btn">次へ</button>
-  <button class="btn" onclick="toggleMode('all')" id="all-mode-btn">全問</button>
-  <button class="btn" onclick="toggleMode('wrong')" id="wrong-mode-btn">不正解</button>
-  <button class="btn" onclick="toggleMode('review')" id="review-mode-btn">復習モード</button>
-  <button class="btn" onclick="toggleMode('random50')" id="random-50-btn">50問ランダム</button>
-  <button class="btn" onclick="resetQuiz()" id="reset-btn">リセット</button>
 </div>
 
 <script>
@@ -2382,8 +2388,8 @@
     
     if (loginId === correctId && loginPass === correctPass) {
       document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('questions').classList.remove('hidden');
-      document.getElementById('controls').classList.remove('hidden');
+      document.getElementById('quiz-container').classList.remove('hidden');
+      document.getElementById('bottom-controls').classList.remove('hidden');
       initializeQuiz();
     } else {
       loginError.textContent = "IDまたはパスワードが間違っています。";
@@ -2539,8 +2545,13 @@
 
   function updateScore() {
     const totalQuestions = currentQuestions.length;
-    const scoreElement = document.getElementById('score');
+    const scoreElement = document.getElementById('score-display');
     scoreElement.textContent = `正解: ${correctAnswers}問 / 全${totalQuestions}問 | 不正解: ${wrongAnsweredQuestions.length}問`;
+  }
+  
+  function toggleScoreDisplay() {
+      const scoreElement = document.getElementById('score-display');
+      scoreElement.classList.toggle('hidden');
   }
 
   function updateNavigationButtons() {
@@ -2549,9 +2560,11 @@
   }
 
   window.onload = function () {
-    // ページロード時に、questionsとcontrolsを非表示
-    document.getElementById('questions').classList.add('hidden');
-    document.getElementById('controls').classList.add('hidden');
+    // ページロード時に、quiz-containerとbottom-controlsを非表示
+    document.getElementById('quiz-container').classList.add('hidden');
+    document.getElementById('bottom-controls').classList.add('hidden');
+    // スコア表示ボタンにイベントリスナーを追加
+    document.getElementById('score-toggle-btn').addEventListener('click', toggleScoreDisplay);
   };
 </script>
 </body>
